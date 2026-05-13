@@ -515,6 +515,7 @@ void loop() {
         if (str.startsWith(SENDER_BOOT_MSG)) {
           // this is sender being reboot, or booting up first time in general
             volatileStats.totalPulses = lastReceivedID; // Update pulse count to last received, because we are resyncing due to reboot or something
+            volatileStats.totalPulsesLost = missedCount; // Update lost pulses before sending stats, so that it is included in the reboot ACK
             currentRadioState = SENDING;
             String rebootMsg = RECEIVER_BOOT_ACK + String(volatileStats.totalPulses) + "," + String(volatileStats.totalRebootsSender) + "," + String(volatileStats.totalRebootsReceiver) + "," + String(volatileStats.totalPulsesLost);
             radio.transmit(rebootMsg.c_str());
@@ -527,6 +528,7 @@ void loop() {
             // Determine new baseline using bigger wins logic
             volatileStats = biggerStatsWin(volatileStats, senderStats);
             lastReceivedID = volatileStats.totalPulses; // Catch up to what they have, we will resend the missing pulses in the normal flow
+            missedCount = volatileStats.totalPulsesLost; // Update missed count to reflect the bigger wins result, so that it is accurate after a reboot
             volatileStats.totalRebootsSender++; // Log reboot event for sender
             saveStatsToFlash(volatileStats.totalPulses, volatileStats.totalRebootsSender, volatileStats.totalRebootsReceiver, volatileStats.totalPulsesLost);
             if (DEBUG) Serial.println("Stats synchronized after sender reboot.");
@@ -544,6 +546,7 @@ void loop() {
             wasRebootFlag = false; // Reset the flag after acknowledging the reboot
             if (DEBUG) Serial.println("Status Query Received, but reboot flag is set. Sending reboot ACK instead...");
             volatileStats.totalPulses = lastReceivedID; // Update pulse count to last received, because we are resyncing due to reboot or something
+            volatileStats.totalPulsesLost = missedCount; // Update lost pulses before sending stats, so that it is included in the reboot ACK
             String rebootAckMsg = RECEIVER_BOOT_MSG + String(volatileStats.totalPulses) + "," + String(volatileStats.totalRebootsSender) + "," + String(volatileStats.totalRebootsReceiver) + "," + String(volatileStats.totalPulsesLost);
             radio.transmit(rebootAckMsg.c_str());
             radio.startReceive();
@@ -552,6 +555,7 @@ void loop() {
             // Determine new baseline using bigger wins logic
             volatileStats = biggerStatsWin(volatileStats, senderStats);
             lastReceivedID = volatileStats.totalPulses; // Catch up to what they have, we will resend the missing pulses in the normal flow
+            missedCount = volatileStats.totalPulsesLost; // Update missed count to reflect the bigger wins result, so that it is accurate after a reboot
             volatileStats.totalRebootsSender++; // Log reboot event for sender
             saveStatsToFlash(volatileStats.totalPulses, volatileStats.totalRebootsSender, volatileStats.totalRebootsReceiver, volatileStats.totalPulsesLost);
             if (DEBUG) Serial.println("Stats synchronized after receiver reboot.");
